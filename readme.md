@@ -260,6 +260,18 @@ I suggest invoking the notify function in the following cases:
 - `server.js`, with all server code.
 - `test.js`, the test suite.
 
+## Documentation
+
+Contained in a single markdown file, `readme.md`. Usually contain the following:
+
+- Purpose of the project and general description.
+- Todo list.
+- Routes, including description of behavior and payloads.
+- DB structure.
+- FS structure, if any.
+- Further configuration instructions, if any.
+- License.
+
 ## Provisioning
 
 When provisioning a new server, upgrade all the packages first.
@@ -409,9 +421,13 @@ A global type of validation that happens before the actual routes (as middleware
 
 I usually just use `GET` and `POST` methods when interchanging JSON. Often, `PUT` and `PATCH` can be dealt with almost the same code as `POST`.
 
-When retrieving data (`GET`), the query (request payload) cannot be larger than 2048 characters. In these cases, I send the queries through `POST`. Since `POST` requests can be cached with the right response headers, this entails no performance issue.
+When retrieving data (`GET`), the query (request payload) cannot be larger than 2048 characters. In cases where this is not enough, I send the queries through `POST`. Since `POST` requests can be cached with the right response headers, this entails no performance issue.
 
 With apologies to the Church of [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)!
+
+## Caching
+
+I use [ETags](https://en.wikipedia.org/wiki/HTTP_ETag); to compute this cache header, I use the actual response body if it is JSON; and the modification time and file size in the case of a static file. Avoiding dates in caching has made my code and debugging much much simpler.
 
 ## Testing
 
@@ -426,6 +442,8 @@ The tests use no backdoors and are indistinguishable from client requests. The o
 I further simplify things by not specifying a test database, and only running the tests locally. Since my development environment is very similar to the environment where the code runs, this seems to work well.
 
 The tests should clean up after themselves using requests - i.e., by deleting the test user just created through a proper route.
+
+Another advantage of testing through HTTP is that the test payloads can work as a complementary documentation of the payloads sent and received by the server for each route.
 
 I recommend not using random quantities when sending payloads, to make the tests replicable.
 
