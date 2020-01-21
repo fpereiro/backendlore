@@ -354,7 +354,22 @@ Cookies are also signed. The session within the cookie should not be easily gues
 
 *Future work: it might be interesting to see if signing cookies with salts (random quantities) per user (instead of using a global salt) would increase security. The only extra cost would be to store an extra quantity per user in the database.*
 
-## Auth routes
+## Routes
+
+Both in çiçek and express, routes are executed in the order in which they are defined. A request might be matched by one or more routes, executed in order. Any route has the power to either "pass" the request to the next matching route, or instead to reply to that request from itself. It can't, however, do both.
+
+A few routes are executed for every incoming request. They exist in the following order.
+
+- Avant route: happens at the beginning creates a `log` object into the `response`, including a timestamp, for profiling and debugging purposes.
+- Public routes (those not requiring to be logged in).
+- Auth routes.
+- Gatekeeper route: this route checks for the presence of a session in the cookie; if no cookie is present, the request is replied with a 403 code and possibly `notify` us. If the session is invalid, checking for its signature can either determine an expired session or a malicious attempt. If the session is valid, the associated user data is retrieved from the database and placed within the request object; in this case, this route invokes `response.next` to pass the request to the following route.
+- CSRF route: checks for the CSRF token in the body of every `POST` request.
+- Private routes (those requiring to be logged in).
+- Admin gatekeeper route: any request looking to match a route after this one must be an admin, otherwise a 403 is returned.
+- Admin routes.
+
+The following are the typical auth routes:
 
 - `POST /auth/signup`
 - `POST /auth/login`
@@ -364,16 +379,6 @@ Cookies are also signed. The session within the cookie should not be easily gues
 - `POST /auth/recover`. This route requires sending emails.
 - `POST /auth/reset`.
 - `POST /auth/changePassword`. This route possibly requires sending emails (to notify the user).
-
-## Routes
-
-Both in çiçek and express, routes are executed in the order in which they are defined. A request might be matched by one or more routes, executed in order. Any route has the power to either "pass" the request to the next matching route, or instead to reply to that request from itself. It can't, however, do both.
-
-A few routes are executed for every incoming request.
-
-- avant route: happens at the beginning creates a `log` object into the `response`, including a timestamp, for profiling and debugging purposes.
-- gatekeeper route: this route checks for the presence of a session in the cookie; if no cookie is present, the request is replied with a 403 code and possibly `notify` us. If the session is invalid, checking for its signature can either determine an expired session or a malicious attempt. If the session is valid, the associated user data is retrieved from the database and placed within the request object; in this case, this route invokes `response.next` to pass the request to the following route.
-- admin gatekeeper route: any request looking to match a route after this one must be an admin, otherwise a 403 is returned.
 
 ## Whitelisting of users
 
