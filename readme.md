@@ -38,10 +38,10 @@ Architecture A
                ____local_ubuntu_box______________________________
               |                                                  |
 internet <----|----------------> node <------> local filesystem  |
-(localhost)   |                    |\                            |
-              |                    | --------> redis             |
-              |                    \                             |
-              |                     -----------------------------|---> AWS S3 & SES
+(localhost)   |                    |                             |
+              |                    +---------> redis             |
+              |                    |                             |
+              |                    +-----------------------------|---> AWS S3 & SES
               |__________________________________________________|
 ```
 
@@ -53,10 +53,10 @@ Architecture B
                ____remote_ubuntu_box_____________________________
               |                                                  |
 internet <----|--> nginx <-----> node <------> local filesystem  |
-              |                    |\                            |
-              |                    | --------> redis ------------|--------|
-              |                    \                             |        v
-              |                     -----------------------------|---> AWS S3 & SES
+              |                    |                             |
+              |                    +---------> redis ------------|--------+
+              |                    |                             |        v
+              |                    +-----------------------------|---> AWS S3 & SES
               |__________________________________________________|
 ```
 
@@ -85,13 +85,13 @@ An architecture with several instances of node running is of course possible, in
 Architecture C
                                          ___api_1___
                                         |           |
-                                   /----|-> node <--|---------> AWS S3 & SES <-------
+                                   +----|-> node <--|----+----> AWS S3 & SES <------+
                                    |    |___________|    |                          |
                                    |                     |                          |
                _load_balancer_     |     ___api_2___     |     __data_server___     |
               |               |    |    |           |    |    |                |    |
-internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |    |
-              |_______________|         |___________|         |\-> redis ------|----|
+internet <----|---> nginx <---|----+----|-> node <--|----+----|--> FS server   |    |
+              |_______________|         |___________|         |+-> redis ------|----+
                                                               |________________|
 ```
 
@@ -109,13 +109,13 @@ It is highly recommended that redis should have a follower/slave replica on a se
 Architecture D
                                          ___api_1___
                                         |           |
-                                   /----|-> node <--|---------> AWS S3 & SES <-----
+                                   +----|-> node <--|----+----> AWS S3 & SES <----+
                                    |    |___________|    |                        |
                                    |                     |                        |
                _load_balancer_     |     ___api_2___     |     __data_server_1_   |    _data_server_2_
               |               |    |    |           |    |    |                |  |   |               |
-internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |  |   |    redis      |
-              |_______________|         |___________|         |\-> redis <-----|------|--> replica    |
+internet <----|---> nginx <---|----+----|-> node <--|----+----|--> FS server   |  |   |    redis      |
+              |_______________|         |___________|         |+-> redis <-----|--+---|--> replica    |
                                                               |________________|      |_______________|
 ```
 
