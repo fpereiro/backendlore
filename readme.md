@@ -523,7 +523,7 @@ Tests are run manually: `node test`, while the server is already running.
 
 ## Development cycle
 
-First, I write the server routes.
+First, I write the server routes along with their documentation.
 
 Then, I write the tests.
 
