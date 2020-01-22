@@ -271,6 +271,8 @@ I suggest invoking the notify function in the following cases:
 
 Lately I'm not relying on local logs anymore; instead, I'm sending all logs to a separate log server that stores the logs as permanent files, and makes them accessible and searchable through a web admin. A saner person would probably use an established logging service. As an [attentive reader pointed out](https://github.com/fpereiro/backendlore/issues/5), we're redirecting the standard output of node to `/tmp`, which means that the logs won't be preserved after a restart. This is by design, because then we don't have the risk of logs filling up the disk (which is something that happens way more often than usually expected - enough to require another moving part, [log rotation](https://en.wikipedia.org/wiki/Log_rotation)). The other advantage of not having local logs is that you don't have to ssh to different servers to see what's going on. This approach, however, requires that all important data should be logged, including (and perhaps foremost) uncaught exceptions and error stacktraces.
 
+If you want to store the logs of your application within the server itself, please change the log path in `mongroup.conf` to another location other than `/tmp. If you do this, I highly recommend you set up log rotation.
+
 ## Keeping the server fresh
 
 If you are running an Architecture of type B and don't mind a couple of minutes of downtime per week, a way to keep your instances fresh is to run a script (which I call `refresh.sh`) like this every week, which will 1) upgrade software packages; 2) stop your app gracefully; 3) stop redis gracefully; 4) restart your instance.
