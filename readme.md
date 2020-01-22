@@ -12,7 +12,7 @@ Your questions and observations are very welcome!
 
 If you must sting, please also be nice. But above all, please be accurate.
 
-This is [all public domain](https://github.com/fpereiro/backendlore#license); take whatever find you useful.
+This is [all public domain](https://github.com/fpereiro/backendlore#license); take whatever you find useful.
 
 ## The approach
 
