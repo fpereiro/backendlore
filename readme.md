@@ -33,7 +33,7 @@ The simplest version of the architecture is that for local development. It looks
 ```
 Architecture A
 
-               ____local ubuntu box_______________________________
+               ____local_ubuntu_box______________________________
               |                                                  |
 internet <----|----------------> node <------> local filesystem  |
 (localhost)   |                    |\                            |
@@ -48,7 +48,7 @@ The simplest version of the architecture on a remote environment (a server conne
 ```
 Architecture B
 
-               ____remote ubuntu box______________________________
+               ____remote_ubuntu_box_____________________________
               |                                                  |
 internet <----|--> nginx <-----> node <------> local filesystem  |
               |                    |\                            |
@@ -63,6 +63,8 @@ nginx works as a [reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy). I
 This architecture, which runs everything on a single Ubuntu instance (node, redis, and access to the local filesystem) can take you surprisingly far. It is definitely sufficient as a test environment. It can also serve as the production environment of a [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) or even of an application with moderate use that is not mission critical.
 
 redis can be replaced or complemented by another NoSQL database (such as [MongoDB](https://www.mongodb.com/)) or a relational database (such as [Postgres](https://www.postgresql.org/)). Throughout this section, where you see *redis*, feel free to replace it with the database you might want to use.
+
+node should be stateless; or rather, store all its state in redis and the FS. This allows for easier scaling later (see below); more importantly, by storing state explicitly (either in redis or in the FS), the overall structure is much easier to understand and debug.
 
 Notice that there's an arrow connecting redis to AWS. This reflects the (highly recommended) possibility of periodically and automatically uploading redis dumps to AWS S3, to restore the database from a snapshot in case of an issue.
 
@@ -79,12 +81,12 @@ An architecture with several instances of node running is of course possible, in
 
 ```
 Architecture C
-                                        ___api_1____
+                                         ___api_1___
                                         |           |
-                                   /----|-> node <--|----\/---> AWS S3 & SES <-------
+                                   /----|-> node <--|---------> AWS S3 & SES <-------
                                    |    |___________|    |                          |
                                    |                     |                          |
-               _load balancer_     |    ___api_2____     |    ___data_server___     |
+               _load_balancer_     |     ___api_2___     |     __data_server___     |
               |               |    |    |           |    |    |                |    |
 internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |    |
               |_______________|         |___________|         |\-> redis ------|----|
@@ -93,7 +95,9 @@ internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |
 
 Notice that we now have a data server, comprising both a database and files. This seems to reflect a pattern that has been repeated since the very beginnings of computing, where there are always two types of storage (one fast and small, another one larger and slower). redis and the FS serve as the particular incarnations of this pattern within our architecture.
 
-In Architecture C, a further modification is necessary: instead of relying on local access to the filesystem, a node server must act as a filesystem server. It should implement routes for reading, writing, listing and deleting files. In my experience, this logic can be done in 100-200 lines, but the code must be written down carefully. If the data server is publicly accessible, redis must be secured through either a password or (better) through [spiped](https://www.tarsnap.com/spiped.html); the FS server, meanwhile, will probably have to use either a password in a header or (better) an auth system with cookies to authorize/deny access.
+Because all nodes refer to the data server for all its state (including sessions), any request can be served by any node; which node serves it is inconsequential. This sidesteps the need for [sticky sessions](https://en.wikipedia.org/wiki/Load_balancing_(computing)#Persistence).
+
+In Architecture C, a further modification is necessary: instead of relying on local access to the filesystem, a node server must act as a filesystem server. It should implement routes for reading, writing, listing and deleting files. In my experience, this logic can be done in 100-200 lines, but the code must be written down carefully. If the data server is publicly accessible, redis must be secured through either a password or (better) through [spiped](https://www.tarsnap.com/spiped.html); the FS server, meanwhile, will probably have to use either a password in a header or (better) an auth system with cookies to authorize/deny access. These security provisions are only necessary if the data server is accessible from the broader internet, but if you use AWS VPC (or any other means to restrict network access to the data server), this is unnecessary.
 
 In either case, the FS server will also communicate with AWS S3 and will handle its contents.
 
@@ -101,12 +105,12 @@ It is highly recommended that redis should have a follower/slave replica on a se
 
 ```
 Architecture D
-                                        ___api_1____
+                                         ___api_1___
                                         |           |
-                                   /----|-> node <--|----\/---> AWS S3 & SES <-----
+                                   /----|-> node <--|---------> AWS S3 & SES <-----
                                    |    |___________|    |                        |
                                    |                     |                        |
-               _load balancer_     |    ___api_2____     |    ___data_server_1_   |   __data_server_2_
+               _load_balancer_     |     ___api_2___     |     __data_server_1_   |    _data_server_2_
               |               |    |    |           |    |    |                |  |   |               |
 internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |  |   |    redis      |
               |_______________|         |___________|         |\-> redis <-----|------|--> replica    |
@@ -154,7 +158,11 @@ Redis is an amazing choice for database. While it may not be the best choice for
 
 Redis is much more than a key-value store: it is a server that implements data structures in memory. In practice, this means that you have access to fundamental constructs like lists, hashes, sets. These data structures are implemented with amazing quality, consistency and performance.
 
+If you work with [mission critical data](https://m.signalvnoise.com/your-software-just-isnt-mission-critical/) (financial transactions, healthcare), I suggest working instead with a relational database that fulfills the [ACID properties](https://en.wikipedia.org/wiki/ACID) and has a very high probability of not losing data ever. As far as I know, redis can guarantee `ACI`, but cannot guarantee `D` to the same extent (at least not if you're running a single node).
+
 As stated above in the Architecture section, it is highly recommended that [RDB persistence](https://redis.io/topics/persistence) (and possibly AOF) should be turned on. I highly recommend backing up redis dumps into AWS S3, instead of just locally - this can be done by the node instance itself.
+
+Because redis is an in-memory database, if either redis (or the underlying instance) is restarted you'll almost certainly lose a few seconds of data (the data written to memory yet not committed to a RDB/AOF files, which are on the disk and will survive a restart). It is critical that neither redis nor the instance where it runs should be randomly restarted. The deeper causes for accidental restarts should be analyzed and eliminated. In seven years of using redis, I've never experienced a restart coming from redis itself (or a redis bug, for that matter); but I have experienced Docker and the OS restarting redis because of memory limits.
 
 I recommend writing down in the readme the key structure used by your application in redis. Here's [an example](https://github.com/altocodenl/acpic#redis-structure).
 
@@ -243,6 +251,7 @@ I find it useful to have a single function, `notify`, to report errors or warnin
 I suggest invoking the notify function in the following cases:
 - Master process fails.
 - Worker process fails.
+- Database fails or is unreachable.
 - Server starts.
 - Client transmission errors.
 - Client is replied with an error code (>= 400).
@@ -353,6 +362,11 @@ Lately, however, I have decided to change the cookie to be httponly (which means
 Cookies are also signed. The session within the cookie should not be easily guessable, so signing it doesn't make it harder to guess. The reason for signing them, however, is that this allows us to distinguish a cookie that was valid but has now expired from an invalid cookie. In other words, we can distinguish an expired session from an attack without having to keep all expired sessions in the database.
 
 *Future work: it might be interesting to see if signing cookies with salts (random quantities) per user (instead of using a global salt) would increase security. The only extra cost would be to store an extra quantity per user in the database.*
+
+Here's how I deal with the cookie/session lifecycle:
+- I set cookies to expire the distant future, and then let the server decide when a cookie has expired; when an expired session is received (as determined by the server), the server replies with a 403 and orders the browser to delete the cookie. In this way, I don't have to guess when a cookie will expire and the server retains full control over their lifecycle.
+- Sessions have an expiry period (could be n hours or n days); after that session *hasn't been used* for that period of time, it expires and is removed. Since redis has an in-built mechanism for expiring keys after a period of time, this happens automatically without extra code.
+- Every time a session is used, it is automatically renewed. This avoids a user being kicked out of the session while they are using it.
 
 ## Routes
 
@@ -465,6 +479,55 @@ Then, I write the tests.
 For each route, first I try to break it. When I can't break it, I send different payloads that should cover all the main cases.
 
 Once the tests are passing, the backend is ready. Time to write the client; and any bugs you'll find will very likely be in the client, since the server is debugged. In this way, errors don't have to be chased on both sides of the wire.
+
+## Vagrant
+
+If you don't want to install node or redis in your host machine, or you're not running Ubuntu, you can use Vagrant to set up a local ubuntu on which you can develop your application. Below is a sample `Vagrantfile` to set up an Ubuntu VM with redis & node installed.
+
+Please note that this will be useful only for your local environment, not to provision remote instances.
+
+```
+Vagrant.configure("2") do |config|
+
+   # Use Ubuntu 18.04
+   config.vm.box = "ubuntu/bionic64"
+
+   # Use 4GB of RAM and 2 cores
+   config.vm.provider "virtualbox" do |v|
+      v.memory = 4096
+      v.cpus = 2
+   end
+
+   # Map server port (if it's not 8000, replace it with the port on which your node server will listen)
+   config.vm.network "forwarded_port", guest: 8000, host: 8000
+
+   config.vm.provision "shell", inline: <<-SHELL
+
+      # Always login as root
+      grep -qxF 'sudo su -' /home/vagrant/.bashrc || echo 'sudo su -' >> /home/vagrant/.bashrc
+
+      # Update & upgrade packages
+      sudo apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --with-new-pkgs
+
+      # Install redis
+      sudo apt-get install -y redis-server
+
+      # Install node.js
+      curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
+      sudo apt-get install -y nodejs
+
+      # Other provisioning commands you may want to run
+
+   SHELL
+end
+```
+
+The essential vagrant commands are:
+- `vagrant up` to create the environment (if it doesn't exist) or to start it (if it already exists).
+- `vagrant ssh` to enter the environmnent (once it's created).
+- `vagrant halt` to shut down the environment.
+- `vagrant destroy` to destroy the environment (WARNING: this will erase all the files within your environment!).
 
 ## Future directions
 
