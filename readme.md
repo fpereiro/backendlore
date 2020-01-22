@@ -265,7 +265,6 @@ I suggest invoking the notify function in the following cases:
 - `mongroup.conf`, for keeping the app running.
 - `package.json`, dependency list.
 - `provision.sh`, for creating new instances.
-- `package.json`, dependency list.
 - `server.js`, with all server code.
 - `test.js`, the test suite.
 
