@@ -154,6 +154,17 @@ sudo certbot --nginx -d DOMAIN
 
 Add the following line to your crontab file (through `sudo crontab -e`: `M H * * * sudo certbot renew`, where `M` is a number between 0 and 59 and `H` is a number between 0 and 23. This command ensures that every day, at the specified hour, the certificates will be updated automatically so that they don't expire.
 
+For forwarding traffic from nginx to a local node, I use this nginx configuration snippet within a `server` block. If you use it, please replace `PORT` with the port where your node server is listening.
+
+```
+   location / {
+      proxy_pass http://127.0.0.1:PORT/;
+      proxy_set_header X-Forwarded-For $remote_addr;
+   }
+```
+
+The `proxy_set_header` line sends to node the IP address of whoever made the request, which is useful for security purposes (like detecting an abnormal geographic location in a login, or a repeated source of malicious requests).
+
 ## Redis
 
 Redis is an amazing choice for database. While it may not be the best choice for you, I highly recommend that you take a look at it, particularly if you've never used it before.
