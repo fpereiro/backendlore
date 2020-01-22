@@ -12,6 +12,8 @@ Your questions and observations are very welcome!
 
 If you must sting, please also be nice. But above all, please be accurate.
 
+I'd like to thank everyone who joined in the [HN discussion](https://news.ycombinator.com/item?id=22106482) of this document and pointed out or stimulated many interesting points that I had missed. I'm humbled and grateful for the tremendously positive and constructive feedback I received. Y'all rock.
+
 This is [all public domain](https://github.com/fpereiro/backendlore#license); take whatever you find useful.
 
 ## The approach
