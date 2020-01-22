@@ -80,16 +80,16 @@ An architecture with several instances of node running is of course possible, in
 
 ```
 Architecture C
-                                        ___api_1____
-                                        |           |
-                                   /----|-> node <--|----\/---> AWS S3 & SES <-------
-                                   |    |___________|    |                          |
-                                   |                     |                          |
-               _load balancer_     |    ___api_2____     |    ___data_server___     |
-              |               |    |    |           |    |    |                |    |
-internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |    |
-              |_______________|         |___________|         |\-> redis ------|----|
-                                                              |________________|
+                                        ┌─╌ api─1 ╌─┐
+                                        │           │
+                                   ┌────┼─> node <──┼────┬──> AWS S3 & SES <─────┐
+                                   │    └───────────┘    │                       │
+                                   │                     │                       │
+              ┌╌ load balancer ╌┐  │    ┌─╌ api─2 ╌─┐    │  ┌─╌ data─server ╌─┐  │
+              │                 │  │    │           │    │  │                 │  │
+internet <────┼────> nginx <────┼──┴────┼─> node <──┼────┴──┼─┬─> FS server   │  │
+              └─────────────────┘       └───────────┘       │ └─> redis <─────┼──┘
+                                                            └─────────────────┘
 ```
 
 Notice that we now have a data server, comprising both a database and files. This seems to reflect a pattern that has been repeated since the very beginnings of computing, where there are always two types of storage (one fast and small, another one larger and slower). redis and the FS serve as the particular incarnations of this pattern within our architecture.
@@ -102,16 +102,18 @@ It is highly recommended that redis should have a follower/slave replica on a se
 
 ```
 Architecture D
-                                        ___api_1____
-                                        |           |
-                                   /----|-> node <--|----\/---> AWS S3 & SES <-----
-                                   |    |___________|    |                        |
-                                   |                     |                        |
-               _load balancer_     |    ___api_2____     |    ___data_server_1_   |   __data_server_2_
-              |               |    |    |           |    |    |                |  |   |               |
-internet <----|---> nginx <---|---------|-> node <--|---------|--> FS server   |  |   |    redis      |
-              |_______________|         |___________|         |\-> redis <-----|------|--> replica    |
-                                                              |________________|      |_______________|
+                                        ┌─╌ api─1 ╌─┐
+                                        │           │
+                                   ┌────┼─> node <──┼────┬──> AWS S3 & SES <───────┐
+                                   │    └───────────┘    │                         │
+                                   │                     │                         │
+              ┌╌ load balancer ╌┐  │    ┌─╌ api─2 ╌─┐    │  ┌─╌ data─server-1 ╌─┐  │  ┌─╌ data─server-2 ╌─┐
+              │                 │  │    │           │    │  │                   │  │  │                   │
+internet <────┼────> nginx <────┼──┴────┼─> node <──┼────┴──┼─┬─> FS server     │  │  │    redis          │
+              └─────────────────┘       └───────────┘       │ └─> redis <───────┼──┴──┼──> replica        │
+                                                            └───────────────────┘     └───────────────────┘
+
+
 ```
 
 With n node servers, it is possible to scale horizontally, to improve performance and avoid an outage if one of the node servers is down.
