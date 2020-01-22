@@ -33,14 +33,15 @@ The simplest version of the architecture is that for local development. It looks
 ```
 Architecture A
 
-               ____local ubuntu box_______________________________
-              |                                                  |
-internet <----|----------------> node <------> local filesystem  |
-(localhost)   |                    |\                            |
-              |                    | --------> redis             |
-              |                    \                             |
-              |                     -----------------------------|---> AWS S3 & SES
-              |__________________________________________________|
+              ┌──╌ local ubuntu box ╌────────────────────────────┐
+              │                                                  │
+internet <────┼────────────────> node <──────> local filesystem  │
+(localhost)   │                   ┬ ┬                            │
+              │                   │ └────────> redis             │
+              │                   │                              │
+              │                   └──────────────────────────────┼───> AWS S3 & SES
+              └──────────────────────────────────────────────────┘
+`
 ```
 
 The simplest version of the architecture on a remote environment (a server connected to the internet with a public IP address) looks like this:
@@ -48,14 +49,14 @@ The simplest version of the architecture on a remote environment (a server conne
 ```
 Architecture B
 
-               ____remote ubuntu box______________________________
-              |                                                  |
-internet <----|--> nginx <-----> node <------> local filesystem  |
-              |                    |\                            |
-              |                    | --------> redis ------------|--------|
-              |                    \                             |        v
-              |                     -----------------------------|---> AWS S3 & SES
-              |__________________________________________________|
+              ┌──╌ remote ubuntu box ╌───────────────────────────┐
+              │                                                  │
+internet <────┼──> nginx <─────> node <──────> local filesystem  │
+              │                   ┬ ┬                            │
+              │                   │ └────────> redis <───────────┼────────┐
+              │                   │                              │        v
+              │                   └──────────────────────────────┼───> aws s3 & ses
+              └──────────────────────────────────────────────────┘
 ```
 
 nginx works as a [reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy). Its main use is to provide HTTPS support - in particular, HTTPS support with nginx is extremely easy to configure with [Let's Encrypt](https://letsencrypt.org/) free, automated and open certificates. For more about HTTPS and nginx, please refer to the [HTTPS section](https://github.com/fpereiro/backendlore/HTTPS).
