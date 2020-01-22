@@ -12,6 +12,8 @@ Your questions and observations are very welcome!
 
 If you must sting, please also be nice. But above all, please be accurate.
 
+This is [all public domain](https://github.com/fpereiro/backendlore#license); take whatever find you useful.
+
 ## The approach
 
 My approach to backends (as with code in general) is to iteratively strive for simplicity. This approach - and a share of good luck - has enabled me to write lean, solid and maintainable server code with a relatively small time investment and minimal hardware resources.
