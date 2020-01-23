@@ -37,14 +37,14 @@ The simplest version of the architecture is that for local development. It looks
 ```
 Architecture A
 
-               ____local_ubuntu_box______________________________
-              |                                                  |
-internet <----|----------------> node <------> local filesystem  |
-(localhost)   |                    |                             |
-              |                    +---------> redis             |
-              |                    |                             |
-              |                    +-----------------------------|---> AWS S3 & SES
-              |__________________________________________________|
+              ┌──╌ local ubuntu box ╌────────────────────────────┐
+              │                                                  │
+internet <────┼────────────────> node <──────> local filesystem  │
+(localhost)   │                   ┬ ┬                            │
+              │                   │ └────────> redis             │
+              │                   │                              │
+              │                   └──────────────────────────────┼───> AWS S3 & SES
+              └──────────────────────────────────────────────────┘
 ```
 
 The simplest version of the architecture on a remote environment (a server connected to the internet with a public IP address) looks like this:
@@ -52,14 +52,14 @@ The simplest version of the architecture on a remote environment (a server conne
 ```
 Architecture B
 
-               ____remote_ubuntu_box_____________________________
-              |                                                  |
-internet <----|--> nginx <-----> node <------> local filesystem  |
-              |                    |                             |
-              |                    +---------> redis ------------|--------+
-              |                    |                             |        v
-              |                    +-----------------------------|---> AWS S3 & SES
-              |__________________________________________________|
+              ┌──╌ remote ubuntu box ╌───────────────────────────┐
+              │                                                  │
+internet <────┼──> nginx <─────> node <──────> local filesystem  │
+              │                   ┬ ┬                            │
+              │                   │ └────────> redis <───────────┼────────┐
+              │                   │                              │        v
+              │                   └──────────────────────────────┼───> AWS S3 & SES
+              └──────────────────────────────────────────────────┘
 ```
 
 nginx works as a [reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy). Its main use is to provide HTTPS support - in particular, HTTPS support with nginx is extremely easy to configure with [Let's Encrypt](https://letsencrypt.org/) free, automated and open certificates. For more about HTTPS and nginx, please refer to the [HTTPS section](https://github.com/fpereiro/backendlore/HTTPS).
@@ -85,16 +85,17 @@ An architecture with several instances of node running is of course possible, in
 
 ```
 Architecture C
-                                         ___api_1___
-                                        |           |
-                                   +----|-> node <--|----+----> AWS S3 & SES <------+
-                                   |    |___________|    |                          |
-                                   |                     |                          |
-               _load_balancer_     |     ___api_2___     |     __data_server___     |
-              |               |    |    |           |    |    |                |    |
-internet <----|---> nginx <---|----+----|-> node <--|----+----|--> FS server   |    |
-              |_______________|         |___________|         |+-> redis ------|----+
-                                                              |________________|
+
+                                        ┌─╌ api─1 ╌─┐
+                                        │           │
+                                   ┌────┼─> node <──┼────┬──> AWS S3 & SES <─────┐
+                                   │    └───────────┘    │                       │
+                                   │                     │                       │
+              ┌╌ load balancer ╌┐  │    ┌─╌ api─2 ╌─┐    │  ┌─╌ data─server ╌─┐  │
+              │                 │  │    │           │    │  │                 │  │
+internet <────┼────> nginx <────┼──┴────┼─> node <──┼────┴──┼─┬─> FS server   │  │
+              └─────────────────┘       └───────────┘       │ └─> redis <─────┼──┘
+                                                            └─────────────────┘
 ```
 
 Notice that we now have a data server, comprising both a database and files. This seems to reflect a pattern that has been repeated since the very beginnings of computing, where there are always two types of storage (one fast and small, another one larger and slower). redis and the FS serve as the particular incarnations of this pattern within our architecture.
@@ -109,16 +110,17 @@ It is highly recommended that redis should have a follower/slave replica on a se
 
 ```
 Architecture D
-                                         ___api_1___
-                                        |           |
-                                   +----|-> node <--|----+----> AWS S3 & SES <----+
-                                   |    |___________|    |                        |
-                                   |                     |                        |
-               _load_balancer_     |     ___api_2___     |     __data_server_1_   |    _data_server_2_
-              |               |    |    |           |    |    |                |  |   |               |
-internet <----|---> nginx <---|----+----|-> node <--|----+----|--> FS server   |  |   |    redis      |
-              |_______________|         |___________|         |+-> redis <-----|--+---|--> replica    |
-                                                              |________________|      |_______________|
+
+                                        ┌─╌ api─1 ╌─┐
+                                        │           │
+                                   ┌────┼─> node <──┼────┬──> AWS S3 & SES <───────┐
+                                   │    └───────────┘    │                         │
+                                   │                     │                         │
+              ┌╌ load balancer ╌┐  │    ┌─╌ api─2 ╌─┐    │  ┌─╌ data─server-1 ╌─┐  │  ┌─╌ data─server-2 ╌─┐
+              │                 │  │    │           │    │  │                   │  │  │                   │
+internet <────┼────> nginx <────┼──┴────┼─> node <──┼────┴──┼─┬─> FS server     │  │  │    redis          │
+              └─────────────────┘       └───────────┘       │ └─> redis <───────┼──┴──┼──> replica        │
+                                                            └───────────────────┘     └───────────────────┘
 ```
 
 With n node servers, it is possible to scale horizontally, to improve performance and avoid an outage if one of the node servers is down.
