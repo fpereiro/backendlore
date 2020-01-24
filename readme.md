@@ -580,7 +580,7 @@ end
 
 The essential vagrant commands are:
 - `vagrant up` to create the environment (if it doesn't exist) or to start it (if it already exists).
-- `vagrant ssh` to enter the environmnent (once it's created).
+- `vagrant ssh` to enter the environment (once it's created).
 - `vagrant halt` to shut down the environment.
 - `vagrant destroy` to destroy the environment (WARNING: this will erase all the files within your environment!).
 
