@@ -404,7 +404,7 @@ I eschew automatic code deployment triggered by a commit to a certain repository
 
 Identity is managed by the server itself, without reliance on external services. User data is stored in the database.
 
-It is absolutely critical to hash user passwords. I recommend using [bcryptjs](https://www.npmjs.com/package/cookie-parser).
+It is absolutely critical to hash user passwords. I recommend using [bcryptjs](https://www.npmjs.com/package/bcryptjs).
 
 Side note: wherever possible, I use pure js modules and avoid those that have C++ bindings. The latter sometimes require native packages to be installed and in my experience tend to be more fickle. js code only needs the runtime and its dependencies to run, and no compilation.
 
