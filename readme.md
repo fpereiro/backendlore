@@ -62,7 +62,7 @@ internet <────┼──> nginx <─────> node <─────�
               └──────────────────────────────────────────────────┘
 ```
 
-nginx works as a [reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy). Its main use is to provide HTTPS support - in particular, HTTPS support with nginx is extremely easy to configure with [Let's Encrypt](https://letsencrypt.org/) free, automated and open certificates. For more about HTTPS and nginx, please refer to the [HTTPS section](https://github.com/fpereiro/backendlore/HTTPS).
+nginx works as a [reverse proxy](https://en.wikipedia.org/wiki/Reverse_proxy). Its main use is to provide HTTPS support - in particular, HTTPS support with nginx is extremely easy to configure with [Let's Encrypt](https://letsencrypt.org/) free, automated and open certificates. For more about HTTPS and nginx, please refer to the [HTTPS section](https://github.com/fpereiro/backendlore#HTTPS).
 
 This architecture, which runs everything on a single Ubuntu instance (node, redis, and access to the local filesystem) can take you surprisingly far. It is definitely sufficient as a test environment. It can also serve as the production environment of a [MVP](https://en.wikipedia.org/wiki/Minimum_viable_product) or even of an application with moderate use that is not mission critical.
 
@@ -72,7 +72,7 @@ node should be stateless; or rather, store all its state in redis and the FS. Th
 
 Notice that there's an arrow connecting redis to AWS. This reflects the (highly recommended) possibility of periodically and automatically uploading redis dumps to AWS S3, to restore the database from a snapshot in case of an issue.
 
-Relying on the local FS is optional, since we're also using AWS S3. For a discussion, see the [File section](https://github.com/fpereiro/backendlore/file).
+Relying on the local FS is optional, since we're also using AWS S3. For a discussion, see the [File section](https://github.com/fpereiro/backendlore#file).
 
 The performance of this simple setup can be outstanding. I have personally witnessed virtual instances (which have significantly less power than a comparable dedicated server) with 4-8 cores and 4-8GB of RAM handling over a thousand requests per second (100M requests per day) with sub-10 millisecond latencies. Unless your application logic is CPU intensive, performance should not be a reason for changing this architecture unless you expect your load to be closer to a billion requests per day.
 
@@ -404,7 +404,7 @@ I eschew automatic code deployment triggered by a commit to a certain repository
 
 Identity is managed by the server itself, without reliance on external services. User data is stored in the database.
 
-It is absolutely critical to hash user passwords. I recommend using [bcryptjs](https://www.npmjs.com/package/cookie-parser).
+It is absolutely critical to hash user passwords. I recommend using [bcryptjs](https://www.npmjs.com/package/bcryptjs).
 
 Side note: wherever possible, I use pure js modules and avoid those that have C++ bindings. The latter sometimes require native packages to be installed and in my experience tend to be more fickle. js code only needs the runtime and its dependencies to run, and no compilation.
 
@@ -583,7 +583,7 @@ end
 
 The essential vagrant commands are:
 - `vagrant up` to create the environment (if it doesn't exist) or to start it (if it already exists).
-- `vagrant ssh` to enter the environmnent (once it's created).
+- `vagrant ssh` to enter the environment (once it's created).
 - `vagrant halt` to shut down the environment.
 - `vagrant destroy` to destroy the environment (WARNING: this will erase all the files within your environment!).
 
