@@ -339,7 +339,7 @@ where `ENV` is `dev` or `prod`.
 
 You can place most of these commands on a single `provision.sh` file, or create different files for provisioning different machines. To me, the important thing is to have a set and unambiguous set of commands that will run successfully and which represent the entire configuration needed in the instance. There should be no unspecified or unwritten steps for provisioning an instance.
 
-If you want to store the logs of your application within the server itself, please change the log path in `mongroup.conf` to another location other than `/tmp. If you do this, I highly recommend you set up log rotation.
+If you want to store the logs of your application within the server itself, please change the log path in `mongroup.conf` to another location other than `/tmp`. If you do this, I highly recommend you set up log rotation.
 
 As long as you fully control the remote instances/servers, I don't see a need for running the application within [Docker](https://www.docker.com/) or any other sort of virtualization. Since the full environment is replicable (starting with a given OS, you run a certain number of commands to reach a provisioned instance), there's no idempotence benefit to virtualization. And by running the service on the host itself, everything else is simpler. I can only recommend virtualization if you're deploying to environments you don't fully control.
 
@@ -466,8 +466,11 @@ In case a worker node fails, it is recommended to use the `uncaughtException` ha
 ```javascript
 if (! cluster.isMaster) return process.on ('uncaughtException', function (error) {
    notify (error);
+   process.exit (1);
 });
 ```
+
+It is important also to exit the worker process in case it suffered an uncaught exception, since the exception potentially renders the process unstable.
 
 ## Master tasks
 
@@ -485,7 +488,7 @@ To keep the code fluid and short, whenever I'm replying to a request with JSON d
 
 ## Validation & auto-activation
 
-I consider it indispensable that every route that receives data should do perform a deep validation of it. If a payload breaks a server, whether inadvertently or maliciously, it is the server's fault. This is embodied in the concept of [auto-activation](https://github.com/fpereiro/teishi#auto-activation).
+I consider it indispensable that every route that receives data should perform a deep validation of it. If a payload breaks a server, whether inadvertently or maliciously, it is the server's fault. This is embodied in the concept of [auto-activation](https://github.com/fpereiro/teishi#auto-activation).
 
 For performing validations, I use a combination of [teishi](https://github.com/fpereiro/teishi) and custom code. Checks are usually done first synchronously, and then sometimes asynchronously against data stored in the database (which necessarily has to be reached asynchronously).
 
@@ -507,7 +510,7 @@ I use [ETags](https://en.wikipedia.org/wiki/HTTP_ETag); to compute this cache he
 
 Since we're writing HTTP APIs, it makes sense to test them through HTTP requests. I use [hitit](https://github.com/fpereiro/hitit), which is a tool that triggers HTTP requests.
 
-My style of testing is end to end - the API is test from the outside only. Any internals are tested through the outcomes that they provide to the routes that use them. If an internal is convoluted enough, it should be moved to its own module and have its own tests, but so far I haven't seen the need for this - code seems to become either an application or a [separate tool](https://github.com/fpereiro/ustack).
+My style of testing is end to end - the API is tested from the outside only. Any internals are tested through the outcomes that they provide to the routes that use them. If an internal is convoluted enough, it should be moved to its own module and have its own tests, but so far I haven't seen the need for this - code seems to become either an application or a [separate tool](https://github.com/fpereiro/ustack).
 
 Whenever a test fails, the entire suite fails. No errors or warnings are tolerated. The test suite either passes or it does not.
 
@@ -531,7 +534,7 @@ First, I write the server routes along with their documentation.
 
 Then, I write the tests.
 
-For each route, first I try to break it. When I can't break it, I send different payloads that should cover all the main cases.
+For each route, first I try to break it. When I can't break it, I send different payloads that should cover all its main cases.
 
 Once the tests are passing, the backend is ready. Time to write the client; and any bugs you'll find will very likely be in the client, since the server is debugged. In this way, errors don't have to be chased on both sides of the wire.
 
