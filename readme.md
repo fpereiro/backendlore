@@ -133,6 +133,29 @@ The truly difficult thing to scale (and where you should be very careful with ve
 
 Here it is essential to be aware of the [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem). When we partition a database into multiple nodes that are connected through the internet (and thus are susceptible to delays or errors in their communication), we can only choose between **consistency** and **availability**. You can either decide to respond to all requests and risk serving & storing inconsistent data, or you can choose to remain fully consistent at the price of having some downtime. This hard choice is an interesting one. Most of the solutions out there, including [redis cluster](https://redis.io/topics/cluster-spec) favor availability over consistency. Whatever solution you use, it should be one of the default ways in which your database of choice is meant to scale, unless you **really** know what you're doing.
 
+```
+Architecture E
+
+                                        ┌─╌ api─1 ╌─┐
+                                        │           │
+                                   ┌────┼─> node <──┼────┬──> AWS S3 & SES <────────┐
+                                   │    └───────────┘    │                          │
+                                   │                     │                          │
+              ┌╌ load balancer ╌┐  │    ┌─╌ api─2 ╌─┐    │  ┌─╌ data─server-1a ╌─┐  │  ┌─╌ data─server-1b ╌─┐
+              │                 │  │    │           │    │  │                    │  │  │                    │
+internet <────┼────> nginx <────┼──┴────┼─> node <──┼────┴──┼─┬─> FS server 1    │  │  │    redis 1         │
+              └─────────────────┘       └───────────┘    │  │ └─> redis 1 <──────┼──┴──┼──> replica         │
+                                                         │  └────────────────────┘  │  └────────────────────┘
+                                                         │                          │
+                                                         │  ┌─╌ data─server-2a ╌─┐  │  ┌─╌ data─server-2b ╌─┐
+                                                         │  │                    │  │  │                    │
+                                                         └──┼─┬─> FS server 2    │  │  │    redis 2         │
+                                                            │ └─> redis 2 <──────┼──┴──┼──> replica         │
+                                                            └────────────────────┘     └────────────────────┘
+```
+
+Below are a few more notes about [database partitioning](https://github.com/fpereiro/backendlore#db-partitioning).
+
 ## HTTPS
 
 Providing HTTPS support with node is possible, but in my experience it is quite more cumbersome. Using nginx seems to reduce the overall complexity of the architecture & setup.
@@ -377,6 +400,49 @@ Then, you can put two entries in the crontab. You must replace `M`, `H` and `D` 
 M H * * D /path/to/refresh.sh
 @reboot /path/to/start.sh
 ```
+
+## DB partitioning
+
+Splitting the data in a database into parts is called [*sharding*](https://en.wikipedia.org/wiki/Shard_(database_architecture)). That name gives me chills; a *shard* is [defined](https://en.wiktionary.org/wiki/shard) as *A piece of broken glass or pottery, especially one found in an archaeological dig* and in my mind's eye evokes the sight of broken glass, which is pretty much the last thing I want to see when talking about the main repository of information of a large application with potentially thousands or millions of users. For this reason, I will use the term *partitioning* (which usually has a FS connotation); and instead of *shards*, I will speak of *nodes*. If you're offended about this, you very likely know way more about distributed databases and should not pay attention to what I'm saying.
+
+Notice that partitioning is unrelated to whether you have read-only replicas of a database. For example, I wouldn't consider an architecture with a single redis master and a single redis replica attached to it to be an architecture with a partitioned database. If you had two redis master databases which both can process writes, then you'd be looking at a partitioned architecture.
+
+My experience with partitioned databases is slim - I only worked once in such a context. We did a manual type of partitioning, where we stored only certain types of data on one database and certain other types of data on the other one (this is called [vertical partitioning](https://en.wikipedia.org/wiki/Partition_(database))). The reason for this was the sheer size of the database, which it being Redis, was not easy to fit in memory if we had it all in one server.
+
+Since I can only talk about my experience, I'm unable to suggest how to perform DB partitioning, especially if you're using relational databases.
+
+Most of the time, there are standard solutions for partitioning that are intimately linked to the database you're using, and developed and promoted by the database vendors. Using this is probably much saner than rolling out your own partitioning. In any case, before adopting any partitioning scheme, I do suggest understanding the answers to the following questions:
+
+- Does the database partition itself automatically or is it done manually? If so, how easy it is to do it?
+- Is it as easy to reduce scale (merge partitions) as it is to create them?
+- Is there downtime when scaling up/down? Or perhaps performance degradation? Is there any chance of losing consistency while this takes place?
+- Is data distributed randomly across partitions? Can you decide where to store data?
+- Does the partitioning compromise the usual [guarantees](https://en.wikipedia.org/wiki/ACID) that your database provides (atomicity, consistency, isolation, durability)? Does it render transactions impossible?
+- In case of a node failing, is there a total write/read failure, a total write failure, a partial write failure, or possible inconsistencies later?
+- How can you backup and recover your entire cluster of databases from scratch? Can you shut down the system cleanly and then recreate it somewhere else?
+
+## Making structural changes to a production database
+
+My experience with changing the structure of production databases is entirely within the NoSQL orbit (mostly Redis and a little bit of MongoDB). Whenever I worked with relational databases, I wasn't the one in charge of performing database migrations (although I have written a couple).
+
+Relational databases have quite sturdy mechanisms for performing updates to the schema of a table. NoSQL databases, generally, do not, so things can go irreversibly bad much easier. For this reason, I have a protocol that I follow when modifying the structure a production database in a system that is running. Generally, this entails no downtime, unless the change I'm performing can affect the data's consistency - in which case, the API needs to be turned off and the changes made when the database is not receiving any other requests.
+
+This protocol is probably overkill for relational databases, though I'm not sure; if in doubt, please go ask someone who has had to do this type of thing with relational databases. If you're running updates on a NoSQL database, this might come in handy.
+
+1. Write the script that performs the changes to the database. In my case, it is usually a single function that performs the necessary changes in the structure of the data.
+2. Test it against a local or dev environment with some data. Get it working reasonably well.
+3. Use a recent production backup and restore it either locally or in a dev environment that can hold all the data.
+4. Debug the script against the replica database with production data you created in #3. You might have to recreate the data several times, and this is fine; think that each time you do it on a dev environment, it is sparing you from committing that very mistake on a production database which thousands or millions depend on.
+5. Add automated sanity checks to the end of your script, and make sure that it all looks good after the script runs. Make a final clean run and check that the script does it all correctly in one go, without further intervention on your part. Eschew manual touch-ups, since those are *very easy* to forget later.
+6. Commit your script (if you haven't done it already) somewhere in your repo, so you know exactly what script you ran.
+7. If your script affects the consistency of the data, you might have to turn off all traffic.
+8. Run a full backup of the production database.
+9. Check that the backup you just created can be recreated on the dev environment you created in #3. If it takes a few minutes, so be it. You want to trust this backup.
+10. Take a deep breath. Run the script against the production database. While the script runs, consider whether this adrenaline rush isn't entirely unrelated to your choice of working with backends. When the script is done, be slow, systematic and make sure to interpret the sanity checks correctly.
+11. Something failed? Restore the production database from the backup you created in #8. Don't freak out. This is exactly why you made the backup in the first place.
+12. Nothing failed! Hurray! Turn on the APIs again. Make sure the traffic is flowing smoothly. Why do you always have to be so paranoid?
+
+This process is the single most stressful controlled backend task that you probably will encounter. I also find it exhilarating.
 
 ## Deploying the server
 
