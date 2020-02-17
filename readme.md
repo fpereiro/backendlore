@@ -362,7 +362,7 @@ where `ENV` is `dev` or `prod`.
 
 You can place most of these commands on a single `provision.sh` file, or create different files for provisioning different machines. To me, the important thing is to have a set and unambiguous set of commands that will run successfully and which represent the entire configuration needed in the instance. There should be no unspecified or unwritten steps for provisioning an instance.
 
-If you want to store the logs of your application within the server itself, please change the log path in `mongroup.conf` to another location other than `/tmp`. If you do this, I highly recommend you set up log rotation.
+If you want to store the logs of your application within the server itself, please change the log path in `mongroup.conf` to another location other than `/tmp`. If you do this, I highly recommend you set up log rotation. For more on logging, please see the [Notification](https://github.com/fpereiro/backendlore#notification) section.
 
 As long as you fully control the remote instances/servers, I don't see a need for running the application within [Docker](https://www.docker.com/) or any other sort of virtualization. Since the full environment is replicable (starting with a given OS, you run a certain number of commands to reach a provisioned instance), there's no idempotence benefit to virtualization. And by running the service on the host itself, everything else is simpler. I can only recommend virtualization if you're deploying to environments you don't fully control.
 
