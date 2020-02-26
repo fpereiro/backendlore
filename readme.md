@@ -474,20 +474,20 @@ It is absolutely critical to hash user passwords. I recommend using [bcryptjs](h
 
 Side note: wherever possible, I use pure js modules and avoid those that have C++ bindings. The latter sometimes require native packages to be installed and in my experience tend to be more fickle. js code only needs the runtime and its dependencies to run, and no compilation.
 
-Cookies are used to identify a session. The session itself is a quantity that is cryptographically hard to guess. The cookie name is predetermined in the configuration (for example, `myappname`); its value is the session itself. The session doesn't contain any user information - this is stored in the database.
+Cookies are used to identify a session. The session itself is a quantity that is cryptographically hard to guess. The cookie name is predetermined in the configuration (for example, `myappname`); its value is the session itself. The session doesn't contain any user information - all user information is stored in the database.
 
-Currently, the cookie is accessible by client-side javascript; the main use case for this is to send it back as an extra field in POST requests (be them JSON or `multipart/form-data`) as [CSRF prevention](https://en.wikipedia.org/wiki/Cross-site_request_forgery). This pattern is called [double submit cookie pattern](https://medium.com/cross-site-request-forgery-csrf/double-submit-cookie-pattern-65bb71d80d9f).
+Recently I have enabled the [`HttpOnly`](https://owasp.org/www-community/HttpOnly) attribute on the cookie, so that it is not accessible by client-side js. The main reason for this is that if the app is ever victim of [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting) through malicious user content that I've failed to filter, users won't be fully vulnerable (otherwise the session, which is a temporary password-equivalent, would be immediately available to the attacker).
 
-Lately, however, I have decided to change the cookie to be httponly (which means that cannot be seen by client-side js) and provide the client with a separate CSRF token. The main reason for this is that if the app is ever victim of [XSS](https://es.wikipedia.org/wiki/Cross-site_scripting) through malicious user content that I've failed to filter, users will be fully vulnerable. I'd rather have an extra layer of security to protect my users at the cost of more code and a somewhat higher complexity. *Future work: I haven't implemented yet this change since I'm still finding an elegant way to generate, use and clean up CSRF tokens.*
+To enable [CSRF prevention](https://en.wikipedia.org/wiki/Cross-site_request_forgery), I create a CSRF token bound to a particular session; this token is sent by the server on a successful login, and also through an endpoint where the client can request a CSRF token - this endpoint also serves as a way for the client to ask the server whether its currently logged in. The CSRF token is sent along with every `POST` request (actually, any request that could perform changes). A CSRF token might not be necessary if you're not supporting older browsers - for a discussion on alternatives, see [here](https://github.com/fpereiro/backendlore/issues/12) and [here](https://news.ycombinator.com/item?id=22114820).
 
 Cookies are also signed. The session within the cookie should not be easily guessable, so signing it doesn't make it harder to guess. The reason for signing them, however, is that this allows us to distinguish a cookie that was valid but has now expired from an invalid cookie. In other words, we can distinguish an expired session from an attack without having to keep all expired sessions in the database.
 
-*Future work: it might be interesting to see if signing cookies with salts (random quantities) per user (instead of using a global salt) would increase security. The only extra cost would be to store an extra quantity per user in the database.*
-
 Here's how I deal with the cookie/session lifecycle:
-- I set cookies to expire the distant future, and then let the server decide when a cookie has expired; when an expired session is received (as determined by the server), the server replies with a 403 and orders the browser to delete the cookie. In this way, I don't have to guess when a cookie will expire and the server retains full control over their lifecycle.
+- I set cookies to expire the distant future (through the `Expires` attribute), and then let the server decide when a cookie has expired; when an expired session is received (as determined by the server), the server replies with a 403 and orders the browser to delete the cookie. In this way, I don't have to guess when a cookie will expire and the server retains full control over their lifecycle.
 - Sessions have an expiry period (could be n hours or n days); after that session *hasn't been used* for that period of time, it expires and is removed. Since redis has an in-built mechanism for expiring keys after a period of time, this happens automatically without extra code.
 - Every time a session is used, it is automatically renewed. This avoids a user being kicked out of the session while they are using it.
+
+Besides `HttpOnly` and `Expires`, I set the `Path` attribute of the cookie since otherwise the cookie doesn't seem to be preserved when all tabs of the browser are closed.
 
 ## Routes
 
