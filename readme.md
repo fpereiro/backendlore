@@ -167,9 +167,14 @@ Using nginx to receive all requests also has the advantage that our node server 
 To configure HTTPS with nginx: if you own a domain `DOMAIN` (could be either a domain (`mydomain.com`) or a subdomain (`app.mydomain.com`)) and its main A record is pointing to the IP of an Ubuntu server under your control, here's how you can set up HTTPS (be sure to replace occurrences of `DOMAIN` with your actual domain :):
 
 ```
+sudo apt-get install python-certbot-nginx -y
+```
+
+Note: in old versions of ubuntu you might have to run these two commands before installing certbot:
+
+```
 sudo add-apt-repository ppa:certbot/certbot -y
 sudo apt-get update
-sudo apt-get install python-certbot-nginx -y
 ```
 
 In the file `/etc/nginx/sites-available/default`, change `server_name` to `DOMAIN`.
@@ -178,8 +183,6 @@ In the file `/etc/nginx/sites-available/default`, change `server_name` to `DOMAI
 sudo service nginx reload
 sudo certbot --nginx -d DOMAIN
 ```
-
-Add the following line to your crontab file (through `sudo crontab -e`: `M H * * * sudo certbot renew`, where `M` is a number between 0 and 59 and `H` is a number between 0 and 23. This command ensures that every day, at the specified hour, the certificates will be updated automatically so that they don't expire.
 
 For forwarding traffic from nginx to a local node, I use this nginx configuration snippet within a `server` block. If you use it, please replace `PORT` with the port where your node server is listening.
 
