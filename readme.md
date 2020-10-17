@@ -167,7 +167,7 @@ Using nginx to receive all requests also has the advantage that our node server 
 To configure HTTPS with nginx: if you own a domain `DOMAIN` (could be either a domain (`mydomain.com`) or a subdomain (`app.mydomain.com`)) and its main A record is pointing to the IP of an Ubuntu server under your control, here's how you can set up HTTPS (be sure to replace occurrences of `DOMAIN` with your actual domain :):
 
 ```
-sudo apt-get install python-certbot-nginx -y
+sudo apt-get install certbot python3-certbot-nginx -y
 ```
 
 Note: in old versions of ubuntu you might have to run these two commands before installing certbot:
